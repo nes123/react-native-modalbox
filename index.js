@@ -115,7 +115,8 @@ export default class ModalBox extends React.PureComponent {
       containerWidth: SCREEN_WIDTH,
       isInitialized: false,
       keyboardOffset: 0,
-      pan: this.createPanResponder(position)
+      pan: this.createPanResponder(position),
+      hideContent: false,
     };
 
     // Needed for iOS because the keyboard covers the screen
@@ -282,7 +283,11 @@ export default class ModalBox extends React.PureComponent {
   stopAnimateClose() {
     if (this.state.isAnimateClose) {
       if (this.state.animClose) this.state.animClose.stop();
-      this.setState({isAnimateClose: false});
+      this.setState({hideContent: true}, () =>
+        this.setState({isAnimateClose: false}, () => {
+          this.setState({hideContent: false});
+        })
+      );
     }
   }
 
@@ -311,12 +316,15 @@ export default class ModalBox extends React.PureComponent {
           useNativeDriver: this.props.useNativeDriver
         }).start(() => {
           // Keyboard.dismiss();   // make this optional. Easily user defined in .onClosed() callback
+          this.setState({hideContent: true}, () => {
           this.setState({
             isAnimateClose: false,
             animClose
           }, () => {
+            this.setState({hideContent: false});
             /* Set the state to the starting position of the modal, preventing from animating where the swipe stopped */
             this.state.position.setValue(this.props.entry === 'top' ? -this.state.containerHeight : this.state.containerHeight);
+          });
           });
           if (this.props.onClosed) this.props.onClosed();
         });
@@ -547,7 +555,7 @@ export default class ModalBox extends React.PureComponent {
         transparent
         visible={visible}
         hardwareAccelerated={true}>
-        {content}
+        {this.state.hideContent ? null : content}
       </Modal>
     );
   }
