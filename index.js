@@ -54,7 +54,8 @@ export default class ModalBox extends React.PureComponent {
     keyboardTopOffset: PropTypes.number,
     onClosed: PropTypes.func,
     onOpened: PropTypes.func,
-    onClosingState: PropTypes.func
+    onClosingState: PropTypes.func,
+    onBackButtonPress: PropTypes.func,
   };
 
   static defaultProps = {
@@ -371,7 +372,7 @@ export default class ModalBox extends React.PureComponent {
       return true;
     };
 
-    const animEvt = Animated.event([null, {customY: position}], {useNativeDriver: true});
+    const animEvt = Animated.event([null, {customY: position}]);
 
     const onPanMove = (evt, state) => {
       const newClosingState =
@@ -542,11 +543,7 @@ export default class ModalBox extends React.PureComponent {
 
     return (
       <Modal
-        onRequestClose={() => {
-          if (this.props.backButtonClose) {
-            this.close();
-          }
-        }}
+        onRequestClose={() => {this.props.onBackButtonPress()}}
         supportedOrientations={[
           'landscape',
           'portrait',
