@@ -419,8 +419,11 @@ export default class ModalBox extends React.PureComponent {
 
     // If the dimensions are still the same we're done
     let newState = {};
-    if (height !== this.state.height) newState.height = height;
-    if (width !== this.state.width) newState.width = width;
+    if (height > 0) {
+      // there is a strange bug and sometimes height is 0 with a follow up with the correct result.
+      if (height !== this.state.height) newState.height = height;
+      if (width !== this.state.width) newState.width = width;
+    }
     this.setState(newState);
 
     if (this.onViewLayoutCalculated) this.onViewLayoutCalculated();
