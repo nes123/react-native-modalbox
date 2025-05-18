@@ -546,7 +546,9 @@ export default class ModalBox extends React.PureComponent {
 
     return (
       <Modal
-        onRequestClose={() => {this.props.onBackButtonPress()}}
+        onRequestClose={() => {
+          if (this.props.onBackButtonPress) this.props.onBackButtonPress();
+        }}
         supportedOrientations={[
           'landscape',
           'portrait',
