@@ -127,6 +127,8 @@ export default class ModalBox extends React.PureComponent {
         Keyboard.addListener('keyboardDidHide', this.onKeyboardHide)
       ];
     }
+
+    this.backHandler = null;
   }
 
   componentDidMount() {
@@ -141,8 +143,8 @@ export default class ModalBox extends React.PureComponent {
 
   componentWillUnmount() {
     if (this.subscriptions) this.subscriptions.forEach(sub => sub.remove());
-    if (this.props.backButtonClose && Platform.OS === 'android')
-      BackHandler.removeEventListener('hardwareBackPress', this.onBackPress);
+    if (this.props.backButtonClose && Platform.OS === 'android' && this.backHandler)
+    this.backHandler.remove()
   }
 
   onBackPress() {
@@ -372,7 +374,7 @@ export default class ModalBox extends React.PureComponent {
       return true;
     };
 
-    const animEvt = Animated.event([null, {customY: position}],{useNativeDriver: false});
+    const animEvt = Animated.event([null, {customY: position}],{useNativeDriver: this.props.useNativeDriver});
 
     const onPanMove = (evt, state) => {
       const newClosingState =
@@ -419,11 +421,8 @@ export default class ModalBox extends React.PureComponent {
 
     // If the dimensions are still the same we're done
     let newState = {};
-    if (height > 0) {
-      // there is a strange bug and sometimes height is 0 with a follow up with the correct result.
-      if (height !== this.state.height) newState.height = height;
-      if (width !== this.state.width) newState.width = width;
-    }
+    if (height !== this.state.height) newState.height = height;
+    if (width !== this.state.width) newState.width = width;
     this.setState(newState);
 
     if (this.onViewLayoutCalculated) this.onViewLayoutCalculated();
@@ -546,9 +545,7 @@ export default class ModalBox extends React.PureComponent {
 
     return (
       <Modal
-        onRequestClose={() => {
-          if (this.props.onBackButtonPress) this.props.onBackButtonPress();
-        }}
+        onRequestClose={() => {this.props.onBackButtonPress()}}
         supportedOrientations={[
           'landscape',
           'portrait',
@@ -572,8 +569,9 @@ export default class ModalBox extends React.PureComponent {
     ) {
       this.onViewLayoutCalculated = () => {
         this.animateOpen();
-        if (this.props.backButtonClose && Platform.OS === 'android')
-          BackHandler.addEventListener('hardwareBackPress', this.onBackPress);
+        if (this.props.backButtonClose && Platform.OS === 'android') {
+          this.backHandler = BackHandler.addEventListener('hardwareBackPress', this.onBackPress);
+        }
         this.onViewLayoutCalculated = null;
       };
       this.setState({isAnimateOpen: true});
@@ -587,8 +585,8 @@ export default class ModalBox extends React.PureComponent {
       (this.state.isOpen || this.state.isAnimateOpen)
     ) {
       this.animateClose();
-      if (this.props.backButtonClose && Platform.OS === 'android')
-        BackHandler.removeEventListener('hardwareBackPress', this.onBackPress);
+       if (this.props.backButtonClose && Platform.OS === 'android' && this.backHandler)
+    this.backHandler.remove()
     }
   }
 }
