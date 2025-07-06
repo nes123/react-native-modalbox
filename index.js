@@ -91,7 +91,7 @@ export default class ModalBox extends React.PureComponent {
     this.animateClose = this.animateClose.bind(this);
     this.calculateModalPosition = this.calculateModalPosition.bind(this);
     this.createPanResponder = this.createPanResponder.bind(this);
-    this.onViewLayout = this.onViewLayout.bind(this);
+    
     this.onContainerLayout = this.onContainerLayout.bind(this);
     this.renderBackdrop = this.renderBackdrop.bind(this);
     this.renderContent = this.renderContent.bind(this);
@@ -118,6 +118,7 @@ export default class ModalBox extends React.PureComponent {
       keyboardOffset: 0,
       pan: this.createPanResponder(position),
       hideContent: false,
+      layoutReady: false,
     };
 
     // Needed for iOS because the keyboard covers the screen
@@ -415,18 +416,35 @@ export default class ModalBox extends React.PureComponent {
   /*
    * Event called when the modal view layout is calculated
    */
-  onViewLayout(evt) {
-    const height = evt.nativeEvent.layout.height;
-    const width = evt.nativeEvent.layout.width;
 
-    // If the dimensions are still the same we're done
-    let newState = {};
-    if (height !== this.state.height) newState.height = height;
-    if (width !== this.state.width) newState.width = width;
-    this.setState(newState);
+onViewLayout = (evt) => {
+  const height = evt.nativeEvent.layout.height;
+  const width = evt.nativeEvent.layout.width;
 
-    if (this.onViewLayoutCalculated) this.onViewLayoutCalculated();
+  const layoutReady = width > 0 && height > 0;
+
+  const changed =
+    height !== this.state.height || width !== this.state.width;
+
+  if (changed || !this.state.layoutReady) {
+    this.setState(
+      {
+        height,
+        width,
+        layoutReady,
+      },
+      () => {
+        if (this.onViewLayoutCalculated && layoutReady)
+          this.onViewLayoutCalculated();
+      }
+    );
+  } else {
+    if (this.onViewLayoutCalculated && layoutReady)
+      this.onViewLayoutCalculated();
   }
+};
+
+
 
   /*
    * Event called when the container view layout is calculated
@@ -488,31 +506,33 @@ export default class ModalBox extends React.PureComponent {
   }
 
   renderContent() {
-    const size = {
-      height: this.state.containerHeight,
-      width: this.state.containerWidth
-    };
-    const offsetX = (this.state.containerWidth - this.state.width) / 2;
+  const size = {
+    height: this.state.containerHeight,
+    width: this.state.containerWidth
+  };
 
-    return (
-      <Animated.View
-        onLayout={this.onViewLayout}
-        style={[
-          styles.wrapper,
-          size,
-          this.props.style,
-          {
-            transform: [
-              {translateY: this.state.position},
-              {translateX: offsetX}
-            ]
-          }
-        ]}
-        {...this.state.pan.panHandlers}>
-        {this.props.children}
-      </Animated.View>
-    );
+  const offsetX = (this.state.containerWidth - this.state.width) / 2;
+
+  const transform = [{ translateY: this.state.position }];
+  if (this.state.layoutReady) {
+    transform.push({ translateX: offsetX });
   }
+
+  return (
+    <Animated.View
+      onLayout={this.onViewLayout}
+      style={[
+        styles.wrapper,
+        size,
+        this.props.style,
+        { transform }
+      ]}
+      {...this.state.pan.panHandlers}>
+      {this.props.children}
+    </Animated.View>
+  );
+}
+
 
   /*
    * Render the component
@@ -563,6 +583,7 @@ export default class ModalBox extends React.PureComponent {
 
   open() {
     if (this.props.isDisabled) return;
+
     if (
       !this.state.isAnimateOpen &&
       (!this.state.isOpen || this.state.isAnimateClose)
@@ -577,6 +598,30 @@ export default class ModalBox extends React.PureComponent {
       this.setState({isAnimateOpen: true});
     }
   }
+
+  open() {
+  if (this.props.isDisabled) return;
+
+  if (!this.state.isAnimateOpen && (!this.state.isOpen || this.state.isAnimateClose)) {
+    if (this.state.layoutReady) {
+      this.animateOpen();
+      if (this.props.backButtonClose && Platform.OS === 'android') {
+        this.backHandler = BackHandler.addEventListener('hardwareBackPress', this.onBackPress);
+      }
+    } else {
+      this.onViewLayoutCalculated = () => {
+        this.animateOpen();
+        if (this.props.backButtonClose && Platform.OS === 'android') {
+          this.backHandler = BackHandler.addEventListener('hardwareBackPress', this.onBackPress);
+        }
+        this.onViewLayoutCalculated = null;
+      };
+    }
+
+    this.setState({ isAnimateOpen: true });
+  }
+}
+
 
   close() {
     if (this.props.isDisabled) return;
