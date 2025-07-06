@@ -375,7 +375,7 @@ export default class ModalBox extends React.PureComponent {
       return true;
     };
 
-    const animEvt = Animated.event([null, {customY: position}],{useNativeDriver: this.props.useNativeDriver});
+    const animEvt = Animated.event([null, {customY: position}],{useNativeDriver: false});
 
     const onPanMove = (evt, state) => {
       const newClosingState =
@@ -565,7 +565,9 @@ onViewLayout = (evt) => {
 
     return (
       <Modal
-        onRequestClose={() => {this.props.onBackButtonPress()}}
+        onRequestClose={() => {
+          if (this.props.onBackButtonPress) this.props.onBackButtonPress();
+        }}
         supportedOrientations={[
           'landscape',
           'portrait',
